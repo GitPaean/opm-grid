@@ -166,16 +166,17 @@ scatterExportInformation(int numExport, const Id* exportGlobalGids,
 
     cc.scatter(numberOfExportedVerticesPerProcess.data(), &numImport, 1, root);
     assert(cc.rank() != root || numImport == 0);
+    const int num_parts = 4;
 
     // 2. Build the imports/exports themselves.
     std::string error;
     if (cc.rank() == root) {
-        offsets.resize(cc.size() + 1, 0);
+        offsets.resize(num_parts + 1, 0);
         std::partial_sum(numberOfExportedVerticesPerProcess.begin(),
                          numberOfExportedVerticesPerProcess.end(),
                          offsets.begin() + 1);
             globalIndicesToSend.resize(numExport, 0);
-            const int commSize = cc.size();
+            const int commSize = num_parts;
             std::vector<int> currentIndex(commSize, 0);
             for (int i = 0; i < numExport; ++i) {
                 if (exportToPart[i] >= commSize) {
@@ -398,11 +399,11 @@ public:
             OPM_THROW(std::runtime_error, "Could not initialize Zoltan, or Zoltan partitioning failed.");
         }
 
-        std::tie(numImport, importGlobalGidsVector) = scatterExportInformation<ZoltanId>(numExport, exportGlobalGids,
+        /* std::tie(numImport, importGlobalGidsVector) = scatterExportInformation<ZoltanId>(numExport, exportGlobalGids,
                                                                                          exportToPart, root, cc);
 
         if (cc.rank() != root)
-            importGlobalGids = importGlobalGidsVector.data();
+            importGlobalGids = importGlobalGidsVector.data(); */
 
         return makeImportAndExportLists(cpgrid,
                                         cc,
@@ -415,7 +416,7 @@ public:
                                         exportGlobalGids,
                                         exportToPart,
                                         importGlobalGids,
-                                        allowDistributedWells);
+                                        true); //llowDistributedWells);
     }
 
     ~ZoltanSerialPartitioner()
@@ -445,7 +446,8 @@ private:
 
         setDefaultZoltanParameters(zz);
         Zoltan_Set_Param(zz, "IMBALANCE_TOL", std::to_string(zoltanImbalanceTol).c_str());
-        Zoltan_Set_Param(zz, "NUM_GLOBAL_PARTS", std::to_string(cc.size()).c_str());
+        // Zoltan_Set_Param(zz, "NUM_GLOBAL_PARTS", std::to_string(cc.size()).c_str());
+        Zoltan_Set_Param(zz, "NUM_GLOBAL_PARTS", std::to_string(4).c_str());
 
         // For the load balancer one process has the whole grid and
         // all others an empty partition before loadbalancing.
