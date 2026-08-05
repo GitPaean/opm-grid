@@ -17,7 +17,11 @@
 cmake_minimum_required (VERSION 3.23)
 
 # Mandatory call to project
-project(opm-grid C CXX Fortran)
+# No Fortran: opm-grid has no Fortran sources, and the only thing the language
+# enabled was FortranCInterface's FCMacros.h, which is generated but never
+# #included anywhere in the module. Requiring a Fortran compiler for a header
+# nothing reads just makes the module unbuildable wherever there is none.
+project(opm-grid C CXX)
 
 # project information is in dune.module. Read this file and set variables.
 # we cannot generate dune.module since it is read by dunecontrol before
@@ -63,8 +67,6 @@ macro(opm-grid_prereqs_hook)
 endmacro()
 
 macro(opm-grid_language_hook)
-  include(FortranCInterface)
-  fortrancinterface_header(${PROJECT_BINARY_DIR}/FCMacros.h MACRO_NAMESPACE FC_)
 endmacro()
 
 macro(opm-grid_config_hook)
