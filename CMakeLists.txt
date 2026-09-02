@@ -17,11 +17,24 @@
 cmake_minimum_required (VERSION 3.23)
 
 # Mandatory call to project
-# No Fortran: opm-grid has no Fortran sources, and the only thing the language
-# enabled was FortranCInterface's FCMacros.h, which is generated but never
-# #included anywhere in the module. Requiring a Fortran compiler for a header
-# nothing reads just makes the module unbuildable wherever there is none.
-project(opm-grid C CXX)
+# opm-grid has no Fortran sources; Fortran is enabled only so that
+# FortranCInterface can detect the BLAS/LAPACK name mangling and write
+# FCMacros.h, which opm-common's opm/common/utility/numeric/blas_lapack.h
+# hard-requires (it #errors when the header is missing) and which
+# VelocityInterpolation.cpp and trans_tpfa.c pull in through it.
+#
+# Ask for the language only when a compiler for it actually exists, rather
+# than keying on the host OS: a Windows machine with Intel Fortran should get
+# the real header, and a machine without any Fortran compiler should still
+# configure. opm-grid_language_hook writes a fallback in that case.
+# Note: project() has not run yet, so use check_language(), not CMAKE_Fortran_COMPILER.
+include(CheckLanguage)
+check_language(Fortran)
+if(CMAKE_Fortran_COMPILER)
+  project(opm-grid C CXX Fortran)
+else()
+  project(opm-grid C CXX)
+endif()
 
 # project information is in dune.module. Read this file and set variables.
 # we cannot generate dune.module since it is read by dunecontrol before
@@ -66,7 +79,52 @@ macro(opm-grid_prereqs_hook)
   endif()
 endmacro()
 
+# Write a fallback FCMacros.h when FortranCInterface could not produce one.
+# It assumes the de-facto standard mangling -- lowercase with a trailing
+# underscore -- used by gfortran-built BLAS/LAPACK (OpenBLAS, reference LAPACK)
+# and also exported by MKL. Rewrites the file only when the contents differ, so
+# a reconfigure does not needlessly invalidate everything that includes it.
+function(opm_write_fallback_fcmacros path)
+  set(content
+"#ifndef FC_HEADER_INCLUDED
+#define FC_HEADER_INCLUDED
+
+/* Fallback Fortran name mangling, written without a working FortranCInterface
+   detection: lowercase with trailing underscore (gfortran/OpenBLAS/LAPACK). */
+#define FC_GLOBAL(name,NAME) name##_
+#define FC_GLOBAL_(name,NAME) name##_
+
+#endif
+")
+  set(existing "")
+  if(EXISTS "${path}")
+    file(READ "${path}" existing)
+  endif()
+  if(NOT existing STREQUAL content)
+    message(STATUS "No usable FortranCInterface result - writing fallback FCMacros.h "
+                   "assuming lowercase-with-underscore BLAS/LAPACK name mangling "
+                   "(gfortran/OpenBLAS/LAPACK/MKL convention). If linking BLAS/LAPACK "
+                   "fails with unresolved symbols like 'dgemm_', your library uses a "
+                   "different convention; configure with -DCMAKE_Fortran_COMPILER=... "
+                   "so the real mangling can be detected.")
+    file(WRITE "${path}" "${content}")
+  endif()
+endfunction()
+
 macro(opm-grid_language_hook)
+  if(CMAKE_Fortran_COMPILER)
+    include(FortranCInterface)
+    fortrancinterface_header(${PROJECT_BINARY_DIR}/FCMacros.h MACRO_NAMESPACE FC_)
+  endif()
+  # Two ways to end up without usable macros: no Fortran compiler at all, or
+  # a compiler FortranCInterface could not link against the C toolchain (MinGW
+  # gfortran on PATH with an MSVC/Ninja toolchain, say). The latter is reported
+  # as a status message rather than an error and leaves behind a header with no
+  # macros in it, which __has_include() is happy to find, so test the result
+  # rather than the compiler.
+  if(NOT FortranCInterface_GLOBAL_FOUND)
+    opm_write_fallback_fcmacros(${PROJECT_BINARY_DIR}/FCMacros.h)
+  endif()
 endmacro()
 
 macro(opm-grid_config_hook)
