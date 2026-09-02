@@ -46,7 +46,7 @@ namespace Opm
 /// }
 ///
 /// Typical OpenMP-threaded loop over grid using this class:
-/// ElementChunks chunks(gridview, num_threads);
+/// ElementChunks chunks(gridview, Dune::Partitions::all, num_threads);
 /// #pragma omp parallel for
 /// for (std::size_t ci = 0; ci < chunks.size(); ++ci) {
 ///     for (const auto& elem : chunks[ci]) {
@@ -61,7 +61,7 @@ namespace Opm
 /// The ElementChunks object stores a vector of iterators, so if you
 /// have several such loops it can be a good idea to create the object
 /// once instead of once per loop:
-/// ElementChunks chunks(gridview, num_threads);
+/// ElementChunks chunks(gridview, Dune::Partitions::all, num_threads);
 /// // First loop
 /// #pragma omp parallel for
 /// for (std::size_t ci = 0; ci < chunks.size(); ++ci) {
