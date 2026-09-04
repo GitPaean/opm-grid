@@ -91,6 +91,9 @@ class IndexSet;
 class IdSet;
 class LevelGlobalIdSet;
 class PartitionTypeIndicator;
+// So that the `friend class Intersection` below names this one and not
+// Dune::Intersection, which intersection.hh has already made visible.
+class Intersection;
 template<int,int> class Geometry;
 template<int> class Entity;
 template<int> class EntityRep;

@@ -3,6 +3,7 @@
 #include <array>
 #include <map>
 #include <set>
+#include <type_traits>
 #include <vector>
 #include <utility>
 #include"CpGridData.hpp"
@@ -214,7 +215,14 @@ int getIndex(const int* i)
 template<class T>
 int getIndex(T i)
 {
-    return i->index();
+    // Microsoft's std::array iterator is a class, not a raw pointer, so this
+    // template is chosen over the getIndex(const int*) overload for it.
+    using Pointee = std::remove_cv_t<std::remove_reference_t<decltype(*i)>>;
+    if constexpr (std::is_integral_v<Pointee>) {
+        return static_cast<int>(*i);
+    } else {
+        return i->index();
+    }
 }
 
 template<class C>
