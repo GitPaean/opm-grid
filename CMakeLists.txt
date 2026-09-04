@@ -17,7 +17,18 @@
 cmake_minimum_required (VERSION 3.23)
 
 # Mandatory call to project
-project(opm-grid C CXX Fortran)
+# Fortran is enabled only so that FortranCInterface can write FCMacros.h,
+# which blas_lapack.h #errors without; nothing here is Fortran. Ask for the
+# language only where a compiler exists, so a machine without one still
+# configures. check_language(), not CMAKE_Fortran_COMPILER: project() has not
+# run yet.
+include(CheckLanguage)
+check_language(Fortran)
+if(CMAKE_Fortran_COMPILER)
+  project(opm-grid C CXX Fortran)
+else()
+  project(opm-grid C CXX)
+endif()
 
 # project information is in dune.module. Read this file and set variables.
 # we cannot generate dune.module since it is read by dunecontrol before
@@ -63,8 +74,12 @@ macro(opm-grid_prereqs_hook)
 endmacro()
 
 macro(opm-grid_language_hook)
-  include(FortranCInterface)
-  fortrancinterface_header(${PROJECT_BINARY_DIR}/FCMacros.h MACRO_NAMESPACE FC_)
+  if(CMAKE_Fortran_COMPILER)
+    include(FortranCInterface)
+    fortrancinterface_header(${PROJECT_BINARY_DIR}/FCMacros.h MACRO_NAMESPACE FC_)
+  endif()
+  # Without a Fortran compiler none is written, and blas_lapack.h then takes
+  # the FCMacros.h the build environment supplies.
 endmacro()
 
 macro(opm-grid_config_hook)
