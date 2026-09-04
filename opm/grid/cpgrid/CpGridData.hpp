@@ -384,7 +384,9 @@ public:
         }
         else {
             OPM_THROW(std::logic_error, "Vertex has no history record.\n");
+#if defined(__CUDACC__)   // not an MSVC identifier
             __builtin_unreachable();
+#endif
         }
     }
 
