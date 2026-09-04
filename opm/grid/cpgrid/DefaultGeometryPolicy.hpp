@@ -47,6 +47,11 @@ namespace cpgrid
 {
 template<int mydim, int dim>
 class Geometry;
+// Declared before this header instantiates Geometry<3,3>: without them the
+// primary template is chosen and cached, and the specialization never used.
+template<int dim> class Geometry<0, dim>;
+template<int dim> class Geometry<2, dim>;
+template<int dim> class Geometry<3, dim>;
 /// @brief
 /// @todo Doc me!
 class DefaultGeometryPolicy
