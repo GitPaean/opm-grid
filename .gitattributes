@@ -1,0 +1,32 @@
+# Copyright 2026 SINTEF Digital, Mathematics & Cybernetics.
+#
+# Eclipse input decks and grid files use '\n' line endings by specification and
+# are parsed byte-for-byte (OPM opens them in binary mode, also on Windows), so
+# force LF at checkout: a clone with core.autocrlf=true on Windows would
+# otherwise inject CR into the test data and shift every fixed-width record.
+#
+# NB: these patterns are matched case-sensitively, so every case variant
+# occurring in the tree needs its own line - '*.inc' does not cover 'FOO.INC'.
+# Only *.DATA and *.data occur here today; the rest are listed so that adding
+# such a file later is covered by default, and to keep the three OPM
+# repositories consistent.
+*.DATA    text eol=lf
+*.data    text eol=lf
+*.inc     text eol=lf
+*.INC     text eol=lf
+*.include text eol=lf
+*.INCLUDE text eol=lf
+*.grdecl  text eol=lf
+*.GRDECL  text eol=lf
+
+# Dune grid format files (parsed test input)
+*.dgf text eol=lf
+*.DGF text eol=lf
+
+# Unformatted (binary) Eclipse I/O files: never convert these.
+*.EGRID  binary
+*.GRID   binary
+*.INIT   binary
+*.UNRST  binary
+*.UNSMRY binary
+*.SMSPEC binary
