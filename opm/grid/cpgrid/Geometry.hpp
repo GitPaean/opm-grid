@@ -638,7 +638,12 @@ namespace Dune
                     all_geom.geomVector(std::integral_constant<int,3>());
                 EntityVariableBase<cpgrid::Geometry<2,3>>& refined_faces =
                     all_geom.geomVector(std::integral_constant<int,1>());
-                EntityVariableBase<cpgrid::Geometry<3,3>>& refined_cells =
+                // Use the dependent form Geometry<3,cdim> (cdim==3 here) rather than
+                // the hard-coded Geometry<3,3>: referencing the concrete self type while
+                // this very specialization is still incomplete makes MSVC instantiate
+                // Geometry<3,3> from the *primary* template and cache it, after which the
+                // partial specialization is never selected again.
+                EntityVariableBase<cpgrid::Geometry<3,cdim>>& refined_cells =
                     all_geom.geomVector(std::integral_constant<int,0>());
                 EntityVariableBase<enum face_tag>& mutable_face_tags = refined_face_tags;
                 EntityVariableBase<PointType>& mutable_face_normals = refined_face_normals;
@@ -1033,7 +1038,7 @@ namespace Dune
                 // Compare the sum of all the volumes of all refined cells with 'parent cell' volume.
                 if (std::fabs(sum_all_refined_cell_volumes - this->volume())
                     > std::numeric_limits<Geometry<3, cdim>::ctype>::epsilon()) {
-                    Geometry<3, cdim>::ctype correction = this->volume() / sum_all_refined_cell_volumes;
+                    typename Geometry<3, cdim>::ctype correction = this->volume() / sum_all_refined_cell_volumes;
                     for(auto& cell: refined_cells){
                         cell.vol_ *= correction;
                     }
@@ -1144,6 +1149,50 @@ namespace Dune
         auto referenceElement(const cpgrid::Geometry<mydim,cdim>& geo) -> decltype(referenceElement<double,mydim>(geo.type()))
         {
             return referenceElement<double,mydim>(geo.type());
+        }
+
+        // DefaultGeometryPolicy's getters, here once the geometries are
+        // complete: defined in its class, MSVC instantiates Geometry<0,3> and
+        // Geometry<2,3> from the specializations only declared there, with
+        // cdim unbound, and fails the static_asserts above.
+        inline const EntityVariable<Geometry<3, 3>, 0>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, 0>&) const
+        {
+            return *cell_geom_ptr_;
+        }
+
+        inline EntityVariable<Geometry<3, 3>, 0>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, 0>&)
+        {
+            return *cell_geom_ptr_;
+        }
+
+        inline const EntityVariable<Geometry<2, 3>, 1>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, 1>&) const
+        {
+            return *face_geom_ptr_;
+        }
+
+        inline EntityVariable<Geometry<2, 3>, 1>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, 1>&)
+        {
+            return *face_geom_ptr_;
+        }
+
+        template<int codim>
+        const EntityVariable<Geometry<0, 3>, 3>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, codim>&) const
+        {
+            static_assert(codim==3, "Codim has to be 3");
+            return *point_geom_ptr_;
+        }
+
+        template<int codim>
+        EntityVariable<Geometry<0, 3>, 3>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, codim>&)
+        {
+            static_assert(codim==3, "Codim has to be 3");
+            return *point_geom_ptr_;
         }
 
     } // namespace cpgrid
