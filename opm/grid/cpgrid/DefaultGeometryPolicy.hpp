@@ -47,6 +47,14 @@ namespace cpgrid
 {
 template<int mydim, int dim>
 class Geometry;
+// Forward-declare the partial specializations too. This header instantiates
+// Geometry<3,3> (e.g. via EntityVariable<Geometry<3,3>,0> below) before the
+// definitions in Geometry.hpp are seen. Without these declarations MSVC binds
+// Geometry<3,3> to the primary template and caches that, so the specialization
+// is never selected afterwards (GCC defers the instantiation and is unaffected).
+template<int dim> class Geometry<0, dim>;
+template<int dim> class Geometry<2, dim>;
+template<int dim> class Geometry<3, dim>;
 /// @brief
 /// @todo Doc me!
 class DefaultGeometryPolicy
@@ -89,41 +97,24 @@ public:
         return geomVector(std::integral_constant<int,codim>());
     }
 
+    // The getters below are defined at the end of Geometry.hpp, after the
+    // geometries themselves; see the note there.
+
     /// \brief Get cell geometry
-    const EntityVariable<cpgrid::Geometry<3, 3>, 0>& geomVector(const std::integral_constant<int, 0>&) const
-    {
-        return *cell_geom_ptr_;
-    }
+    const EntityVariable<cpgrid::Geometry<3, 3>, 0>& geomVector(const std::integral_constant<int, 0>&) const;
     /// \brief Get cell geometry
-    EntityVariable<cpgrid::Geometry<3, 3>, 0>& geomVector(const std::integral_constant<int, 0>&)
-    {
-        return *cell_geom_ptr_;
-    }
+    EntityVariable<cpgrid::Geometry<3, 3>, 0>& geomVector(const std::integral_constant<int, 0>&);
     /// \brief Get face geometry
-    const EntityVariable<cpgrid::Geometry<2, 3>, 1>& geomVector(const std::integral_constant<int, 1>&) const
-    {
-        return *face_geom_ptr_;
-    }
+    const EntityVariable<cpgrid::Geometry<2, 3>, 1>& geomVector(const std::integral_constant<int, 1>&) const;
     /// \brief Get face geometry
-    EntityVariable<cpgrid::Geometry<2, 3>, 1>& geomVector(const std::integral_constant<int, 1>&)
-    {
-        return *face_geom_ptr_;
-    }
+    EntityVariable<cpgrid::Geometry<2, 3>, 1>& geomVector(const std::integral_constant<int, 1>&);
 
     /// \brief Get point geometry
     template<int codim>
-    const EntityVariable<cpgrid::Geometry<0, 3>, 3>& geomVector(const std::integral_constant<int, codim>&) const
-    {
-        static_assert(codim==3, "Codim has to be 3");
-        return *point_geom_ptr_;
-    }
+    const EntityVariable<cpgrid::Geometry<0, 3>, 3>& geomVector(const std::integral_constant<int, codim>&) const;
     /// \brief Get point geometry
     template<int codim>
-    EntityVariable<cpgrid::Geometry<0, 3>, 3>& geomVector(const std::integral_constant<int, codim>&)
-    {
-        static_assert(codim==3, "Codim has to be 3");
-        return *point_geom_ptr_;
-    }
+    EntityVariable<cpgrid::Geometry<0, 3>, 3>& geomVector(const std::integral_constant<int, codim>&);
 
     /// Keep the corner geometries alive when constructing cell geometries.
     std::shared_ptr<const EntityVariable<cpgrid::Geometry<0, 3>, 3>> pointGeometryPtr() const

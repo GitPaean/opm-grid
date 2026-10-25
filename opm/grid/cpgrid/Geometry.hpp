@@ -670,6 +670,50 @@ namespace Dune
             return referenceElement<double,mydim>(geo.type());
         }
 
+        // DefaultGeometryPolicy's getters, here once the geometries are
+        // complete: defined in its class, MSVC instantiates Geometry<0,3> and
+        // Geometry<2,3> from the specializations only declared there, with
+        // cdim unbound, and fails the static_asserts above.
+        inline const EntityVariable<Geometry<3, 3>, 0>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, 0>&) const
+        {
+            return *cell_geom_ptr_;
+        }
+
+        inline EntityVariable<Geometry<3, 3>, 0>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, 0>&)
+        {
+            return *cell_geom_ptr_;
+        }
+
+        inline const EntityVariable<Geometry<2, 3>, 1>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, 1>&) const
+        {
+            return *face_geom_ptr_;
+        }
+
+        inline EntityVariable<Geometry<2, 3>, 1>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, 1>&)
+        {
+            return *face_geom_ptr_;
+        }
+
+        template<int codim>
+        const EntityVariable<Geometry<0, 3>, 3>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, codim>&) const
+        {
+            static_assert(codim==3, "Codim has to be 3");
+            return *point_geom_ptr_;
+        }
+
+        template<int codim>
+        EntityVariable<Geometry<0, 3>, 3>&
+        DefaultGeometryPolicy::geomVector(const std::integral_constant<int, codim>&)
+        {
+            static_assert(codim==3, "Codim has to be 3");
+            return *point_geom_ptr_;
+        }
+
     } // namespace cpgrid
 } // namespace Dune
 
