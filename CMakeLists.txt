@@ -17,7 +17,16 @@
 cmake_minimum_required (VERSION 3.23)
 
 # Mandatory call to project
-project(opm-grid C CXX Fortran)
+# Fortran is enabled only so that FortranCInterface can write FCMacros.h;
+# ask for it only when a compiler exists, so a machine without one (MSVC)
+# still configures. FCMacros.h must then come from the include path.
+include(CheckLanguage)
+check_language(Fortran)
+if(CMAKE_Fortran_COMPILER)
+  project(opm-grid C CXX Fortran)
+else()
+  project(opm-grid C CXX)
+endif()
 
 # project information is in dune.module. Read this file and set variables.
 # we cannot generate dune.module since it is read by dunecontrol before
@@ -60,8 +69,10 @@ macro(opm-grid_prereqs_hook)
 endmacro()
 
 macro(opm-grid_language_hook)
-  include(FortranCInterface)
-  fortrancinterface_header(${PROJECT_BINARY_DIR}/FCMacros.h MACRO_NAMESPACE FC_)
+  if(CMAKE_Fortran_COMPILER)
+    include(FortranCInterface)
+    fortrancinterface_header(${PROJECT_BINARY_DIR}/FCMacros.h MACRO_NAMESPACE FC_)
+  endif()
 endmacro()
 
 macro(opm-grid_config_hook)
