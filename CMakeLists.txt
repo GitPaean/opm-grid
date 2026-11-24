@@ -17,7 +17,23 @@
 cmake_minimum_required (VERSION 3.23)
 
 # Mandatory call to project
-project(opm-grid C CXX Fortran)
+# opm-grid has no Fortran sources; Fortran is enabled only so that
+# FortranCInterface can detect the BLAS/LAPACK name mangling and write
+# FCMacros.h, which opm-common's opm/common/utility/numeric/blas_lapack.h
+# hard-requires (it #errors when the header is missing) and which
+# VelocityInterpolation.cpp and trans_tpfa.c pull in through it.
+#
+# Ask for the language only when a compiler for it exists, so that a
+# machine without one still configures; opm-grid_language_hook then writes a
+# fallback header.
+# Note: project() has not run yet, so use check_language(), not CMAKE_Fortran_COMPILER.
+include(CheckLanguage)
+check_language(Fortran)
+if(CMAKE_Fortran_COMPILER)
+  project(opm-grid C CXX Fortran)
+else()
+  project(opm-grid C CXX)
+endif()
 
 # project information is in dune.module. Read this file and set variables.
 # we cannot generate dune.module since it is read by dunecontrol before
@@ -60,8 +76,21 @@ macro(opm-grid_prereqs_hook)
 endmacro()
 
 macro(opm-grid_language_hook)
-  include(FortranCInterface)
-  fortrancinterface_header(${PROJECT_BINARY_DIR}/FCMacros.h MACRO_NAMESPACE FC_)
+  if(CMAKE_Fortran_COMPILER)
+    include(FortranCInterface)
+    fortrancinterface_header(${PROJECT_BINARY_DIR}/FCMacros.h MACRO_NAMESPACE FC_)
+  endif()
+  # Two ways to end up without usable macros: no Fortran compiler at all, or
+  # one FortranCInterface could not link with the C compiler. The latter is
+  # reported as a status message rather than an error and leaves behind a
+  # header with no macros in it, which __has_include() is happy to find, so
+  # test the result rather than the compiler.
+  # The fallback writer is opm-common's (OpmFCMacros.cmake), shared with
+  # opm-upscaling, which needs the same header for the same reason.
+  include(OpmFCMacros)
+  if(NOT FortranCInterface_GLOBAL_FOUND)
+    opm_write_fallback_fcmacros(${PROJECT_BINARY_DIR}/FCMacros.h)
+  endif()
 endmacro()
 
 macro(opm-grid_config_hook)
